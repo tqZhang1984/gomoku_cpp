@@ -12,6 +12,8 @@
 #include <unordered_map>
 
 #include "board.hpp"
+#include "button.hpp"
+#include "mcts.hpp"
 
 inline sf::Packet&
 operator<<(sf::Packet& packet, const sf::Vector2i& position) {
@@ -124,6 +126,11 @@ class Gomoku {
     }
 
   private:
+    Button button;
+    Button button_ai_show;
+    bool turn = true;
+    bool ai_mode = false;
+
     void online(sf::TcpSocket& socket) {
         while (window_.isOpen()) {
             handle_window_event();
@@ -167,21 +174,45 @@ class Gomoku {
         }
     }
 
-    void offline() {
+    void offline() {            
+        button.window = &window_;
+        button.setTextrue("../docs/button.png");
+        button.setPosition(20,20);
+        button.setScale(0.3, 0.3);
         while (window_.isOpen()) {
-            handle_window_event();
-
-            if (window_.hasFocus()) {
-                handle_undo();
-                handle_cursor_move();
-
-                if (handle_piece_place()) {
-                    handle_over(cursor_position_);
-                    piece_ =
-                        piece_ == Piece::Black ? Piece::White : Piece::Black;
+            if(ai_mode){
+                if(turn){
+                    handle_window_event();
+                    if (window_.hasFocus()) {
+                        handle_undo();
+                        handle_cursor_move();
+                        if (handle_piece_place()) {
+                            handle_over(cursor_position_);
+                            piece_ =
+                                piece_ == Piece::Black ? Piece::White : Piece::Black;
+                            }
+                    }
+                }else{
+                    auto mcts_board = board_.get_board();
+                    mcts m(mcts_board, true);
+                    auto move = m.run();
+                    board_.place(sf::Vector2i{move.first, move.second}, piece_);
+                    handle_over(sf::Vector2i{move.first, move.second});
+                    piece_ = piece_ == Piece::Black ? Piece::White : Piece::Black;
+                    turn  = true;
+                }
+            }else{
+                handle_window_event();
+                if (window_.hasFocus()) {
+                    handle_undo();
+                    handle_cursor_move();
+                    if (handle_piece_place()) {
+                        handle_over(cursor_position_);
+                        piece_ =
+                            piece_ == Piece::Black ? Piece::White : Piece::Black;
+                        }
                 }
             }
-
             render();
         }
     }
@@ -189,9 +220,9 @@ class Gomoku {
     void create_window() {
         const sf::Vector2u window_size(
             static_cast<unsigned>(board_.position().x) * 2
-                + (static_cast<unsigned>(board_.size().x) - 1) * 46,
+                + (static_cast<unsigned>(board_.size().x) - 1) * 100,
             static_cast<unsigned>(board_.position().y) * 2
-                + (static_cast<unsigned>(board_.size().y) - 1) * 46
+                + (static_cast<unsigned>(board_.size().y) - 1) * 100
         );
 
         window_.create(
@@ -220,9 +251,16 @@ class Gomoku {
     }
 
     void handle_window_event() {
-        for (auto event = sf::Event {}; window_.pollEvent(event);)
+        for (auto event = sf::Event {}; window_.pollEvent(event);){
             if (event.type == sf::Event::Closed)
                 window_.close();
+            if(button.onClick(event)){
+                ai_mode = true;
+            }
+            if(button_ai_show.onClick(event)){
+                ai_mode = false;
+            }
+        }
     }
 
     void handle_over(const sf::Vector2i& position) {
@@ -369,7 +407,7 @@ class Gomoku {
                 piece_ = Piece::Black;
 
             board_.place(cursor_position_, piece_);
-
+            turn = false;
             return true;
         }
         return false;
@@ -390,6 +428,14 @@ class Gomoku {
     void render() {
         window_.clear(sf::Color(242, 208, 75));
         board_.draw(window_);
+        button.show();
+        if(ai_mode){
+            button_ai_show.window = &window_;
+            button_ai_show.setTextrue("../docs/button_ai.png");
+            button_ai_show.setPosition(20, 80);
+            button_ai_show.setScale(0.18, 0.18);
+            button_ai_show.show();
+        }
         draw_cursor();
         window_.display();
     }

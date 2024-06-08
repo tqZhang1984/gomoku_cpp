@@ -10,7 +10,7 @@ enum class Piece { Empty, Black, White, Green };
 
 class Board {
   public:
-    Board(const sf::Vector2i& size = {15, 15}) : size_(size) {
+    Board(const sf::Vector2i& size = {9, 9}) : size_(size) {
         reset();
     }
 
@@ -174,6 +174,19 @@ class Board {
         return size_;
     }
 
+    std::vector<std::vector<int>> get_board() const {
+        std::vector<std::vector<int>> result(size_.x, std::vector<int>(size_.y));
+        for (int y = 0; y < size_.y; y++)
+            for (int x = 0; x < size_.x; x++)
+                if(board_[x][y] == Piece::Black)
+                    result[x][y] = 1;
+                else if(board_[x][y] == Piece::White)
+                    result[x][y] = 2;
+                else
+                    result[x][y] = 0;
+        return result;
+    }
+
   private:
     /**
 	 * @brief 绘制棋盘.
@@ -224,16 +237,16 @@ class Board {
         star.setFillColor(sf::Color::Black);
 
         // 绘制星
-        star.setPosition(board_to_window_position({3.f, 3.f}));
+        star.setPosition(board_to_window_position({1.f, 1.f}));
         window.draw(star);
 
-        star.setPosition(board_to_window_position({size_.x - 4.f, 3.f}));
+        star.setPosition(board_to_window_position({size_.x - 2.f, 1.f}));
         window.draw(star);
 
-        star.setPosition(board_to_window_position({3.f, size_.y - 4.f}));
+        star.setPosition(board_to_window_position({1.f, size_.y - 2.f}));
         window.draw(star);
 
-        star.setPosition(board_to_window_position({size_.x - 4.f, size_.y - 4.f}
+        star.setPosition(board_to_window_position({size_.x - 2.f, size_.y - 2.f}
         ));
         window.draw(star);
 
@@ -310,10 +323,10 @@ class Board {
     std::vector<std::vector<Piece>> board_;
     std::vector<sf::Vector2i> histories_;
 
-    const float piece_diameter_ = 40.f;
-    const float piece_spacing_ = 6.f;
+    const float piece_diameter_ = 70.f;
+    const float piece_spacing_ = 30.f;
     const float piece_offset_ = piece_diameter_ + piece_spacing_;
 
     const sf::Vector2i size_;
-    const sf::Vector2f position_ = {piece_offset_ + 10.f, piece_offset_ + 10.f};
+    const sf::Vector2f position_ = {piece_offset_, piece_offset_};
 };
